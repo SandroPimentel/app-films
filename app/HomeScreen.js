@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
-import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { platformIcons } from '../constants/platformIcons';
+
 
 const MONTHS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 
@@ -59,45 +61,45 @@ export default function HomeScreen({ goToSetup }) {
 
   const currentMonthKey = getMonthKey(currentDate);
 
-const displayAbos = abos
-  .filter((abo) => {
-    const date = new Date(abo.derniereEcheance);
-    const key = getMonthKey(date);
+  const displayAbos = abos
+    .filter((abo) => {
+      const date = new Date(abo.derniereEcheance);
+      const key = getMonthKey(date);
 
-    if (key === currentMonthKey) return true;
-    if (!abo.autoRenew) return false;
+      if (key === currentMonthKey) return true;
+      if (!abo.autoRenew) return false;
 
-    const next = addMonths(date, 1);
-    const futureKey = getMonthKey(next);
-    return futureKey === currentMonthKey;
-  })
-  .map((abo) => {
-    const plateformeData = abosData.find((p) => p.name === abo.plateforme);
-    const planData = plateformeData?.plans.find((p) => p.name === abo.formule);
-    const changeDate = planData?.priceChangeDate ? new Date(planData.priceChangeDate) : null;
+      const next = addMonths(date, 1);
+      const futureKey = getMonthKey(next);
+      return futureKey === currentMonthKey;
+    })
+    .map((abo) => {
+      const plateformeData = abosData.find((p) => p.name === abo.plateforme);
+      const planData = plateformeData?.plans.find((p) => p.name === abo.formule);
+      const changeDate = planData?.priceChangeDate ? new Date(planData.priceChangeDate) : null;
 
-    const dateEcheance = new Date(abo.derniereEcheance);
-    const isCurrentMonth = getMonthKey(dateEcheance) === currentMonthKey;
-    const isFuture = getMonthKey(addMonths(dateEcheance, 1)) === currentMonthKey;
+      const dateEcheance = new Date(abo.derniereEcheance);
+      const isCurrentMonth = getMonthKey(dateEcheance) === currentMonthKey;
+      const isFuture = getMonthKey(addMonths(dateEcheance, 1)) === currentMonthKey;
 
-    // Détermine la date effective à laquelle s'applique le prix
-    const effectiveDate = isCurrentMonth
-      ? dateEcheance
-      : isFuture
-      ? addMonths(dateEcheance, 1)
-      : dateEcheance;
+      // Détermine la date effective à laquelle s'applique le prix
+      const effectiveDate = isCurrentMonth
+        ? dateEcheance
+        : isFuture
+          ? addMonths(dateEcheance, 1)
+          : dateEcheance;
 
-    let appliedPrice = abo.prix;
+      let appliedPrice = abo.prix;
 
-    // Vérifie s'il faut mettre à jour le prix selon la date de changement
-    if (changeDate && effectiveDate >= changeDate) {
-      appliedPrice = planData.price;
-    } else if (changeDate && effectiveDate < changeDate && planData.oldPrice) {
-      appliedPrice = planData.oldPrice;
-    }
+      // Vérifie s'il faut mettre à jour le prix selon la date de changement
+      if (changeDate && effectiveDate >= changeDate) {
+        appliedPrice = planData.price;
+      } else if (changeDate && effectiveDate < changeDate && planData.oldPrice) {
+        appliedPrice = planData.oldPrice;
+      }
 
-    return { ...abo, appliedPrice };
-  });
+      return { ...abo, appliedPrice };
+    });
 
 
 
@@ -185,38 +187,46 @@ const displayAbos = abos
                 borderRadius: 10,
                 padding: 16,
                 marginBottom: 12,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 12,
               }}
             >
-              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 18 }}>{abo.plateforme}</Text>
-<Text style={{ color: '#B3B3B3', fontSize: 15, marginTop: 2 }}>
-  {abo.gratuit
-    ? 'Prêté/Gratuit'
-    : `${abo.formule} — ${parseFloat(abo.appliedPrice).toFixed(2)} €/mois`}
-</Text>
-
-
-              {isCurrentMonth && (
-                <Text style={{ color: '#34B6FF', marginTop: 6 }}>
-                  Abonnement payé le {day} {MONTHS[date.getMonth()]} {date.getFullYear()}
+              <Image
+                source={platformIcons[abo.plateforme]}
+                style={{ width: 32, height: 32, backgroundColor: '#fff', borderRadius: 6 }}
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 18 }}>{abo.plateforme}</Text>
+                <Text style={{ color: '#B3B3B3', fontSize: 15, marginTop: 2 }}>
+                  {abo.gratuit
+                    ? 'Prêté/Gratuit'
+                    : `${abo.formule} — ${parseFloat(abo.appliedPrice).toFixed(2)} €/mois`}
                 </Text>
-              )}
 
-              {abo.autoRenew && isFuture && (
-                <Text style={{ color: '#34B6FF', marginTop: 6 }}>
-                  Prochaine échéance le {nextDay} {nextMonth} {nextYear}
-                </Text>
-              )}
+                {isCurrentMonth && (
+                  <Text style={{ color: '#34B6FF', marginTop: 6 }}>
+                    Abonnement payé le {day} {MONTHS[date.getMonth()]} {date.getFullYear()}
+                  </Text>
+                )}
+
+                {abo.autoRenew && isFuture && (
+                  <Text style={{ color: '#34B6FF', marginTop: 6 }}>
+                    Prochaine échéance le {nextDay} {nextMonth} {nextYear}
+                  </Text>
+                )}
+              </View>
 
               <TouchableOpacity
                 style={{
                   backgroundColor: '#D04444',
                   padding: 10,
                   borderRadius: 8,
-                  marginTop: 10,
+                  marginLeft: 6,
                 }}
                 onPress={() => deleteAbo(abo.plateforme)}
               >
-                <Text style={{ color: '#fff', textAlign: 'center', fontWeight: 'bold' }}>Supprimer</Text>
+                <Text style={{ color: '#fff', fontWeight: 'bold' }}>X</Text>
               </TouchableOpacity>
             </View>
           );

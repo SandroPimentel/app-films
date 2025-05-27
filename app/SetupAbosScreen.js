@@ -14,6 +14,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { platformIcons } from '../constants/platformIcons';
+
 
 const ABOS_URL =
   'https://raw.githubusercontent.com/SandroPimentel/abosData/main/abosData.json';
@@ -170,7 +172,7 @@ export default function SetupAbosScreen({ onFinish, aboToEdit }) {
                 }}
               >
                 <Image
-                  source={{ uri: `https://raw.githubusercontent.com/SandroPimentel/abosData/main/${item.icon}` }}
+                  source={platformIcons[item.name]}
                   style={{ width: 24, height: 24, backgroundColor: '#fff', borderRadius: 4 }}
                 />
                 <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 18 }}>{item.name}</Text>
