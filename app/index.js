@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Redirect } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
-import HomeScreen from './HomeScreen';
 import OnboardingScreen from './OnboardingScreen';
 import SetupAbosScreen from './SetupAbosScreen';
 
@@ -32,7 +32,6 @@ export default function Index() {
     setScreen('home');
   };
 
-  // Bouton debug foncé
   const resetAll = async () => {
     await AsyncStorage.clear();
     setForce(f => !f);
@@ -40,6 +39,8 @@ export default function Index() {
   };
 
   if (screen === 'loading') return null;
+  if (screen === 'home') return <Redirect href="/(main)/home" />;
+
   return (
     <View style={{ flex: 1, backgroundColor: "#181A20" }}>
       <TouchableOpacity
@@ -59,7 +60,6 @@ export default function Index() {
       </TouchableOpacity>
       {screen === 'onboarding' && <OnboardingScreen onDone={handleFinishOnboarding} />}
       {screen === 'setup' && <SetupAbosScreen onFinish={handleFinishSetup} existingAbos={abos} />}
-      {screen === 'home' && <HomeScreen goToSetup={() => setScreen('setup')} />}
     </View>
   );
 }

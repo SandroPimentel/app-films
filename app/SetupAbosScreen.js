@@ -13,7 +13,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { platformIcons } from '../constants/platformIcons';
 
 
@@ -144,7 +143,7 @@ export default function SetupAbosScreen({ onFinish, aboToEdit }) {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#181A20', padding: 16 }}>
+    <View style={{ flex: 1, backgroundColor: '#181A20', padding: 16 }}>
       {!aboToEdit && (
         <>
           <Text style={{ color: '#fff', fontSize: 22, fontWeight: 'bold', marginBottom: 12 }}>
@@ -260,6 +259,6 @@ export default function SetupAbosScreen({ onFinish, aboToEdit }) {
           color="#34B6FF"
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }

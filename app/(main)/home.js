@@ -1,26 +1,40 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { platformIcons } from '../constants/platformIcons';
+import { platformIcons } from '../../constants/platformIcons';
 
-
-const MONTHS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+const MONTHS = [
+  'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+  'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'
+];
 
 function getMonthKey(date) {
   return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
 }
-
 function addMonths(date, n) {
   const d = new Date(date);
   d.setMonth(d.getMonth() + n);
   return d;
 }
+function dateToString(d) {
+  return `${d.getDate().toString().padStart(2, '0')} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
 
-export default function HomeScreen({ goToSetup }) {
+export default function HomeScreen() {
   const [abos, setAbos] = useState([]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [visibleMonths, setVisibleMonths] = useState([]);
   const [abosData, setAbosData] = useState([]);
+  const [fakeToday, setFakeToday] = useState(null);
+  const router = useRouter();
+
+  // Debug : Reset onboarding
+  const resetAll = async () => {
+    await AsyncStorage.clear();
+    // Redirige sur la racine, donc plus de tab bar (onboarding/setup)
+    router.replace('/');
+  };
 
   useEffect(() => {
     const fetchAbosData = async () => {
@@ -57,9 +71,12 @@ export default function HomeScreen({ goToSetup }) {
       months.push(getMonthKey(new Date(now.getFullYear(), now.getMonth() + 1, 1)));
       setVisibleMonths(months);
     })();
-  }, []);
+  }, [currentDate]);
 
   const currentMonthKey = getMonthKey(currentDate);
+
+  // SIMULATEUR : on utilise fakeToday sinon today réel
+  const today = fakeToday || new Date();
 
   const displayAbos = abos
     .filter((abo) => {
@@ -82,7 +99,6 @@ export default function HomeScreen({ goToSetup }) {
       const isCurrentMonth = getMonthKey(dateEcheance) === currentMonthKey;
       const isFuture = getMonthKey(addMonths(dateEcheance, 1)) === currentMonthKey;
 
-      // Détermine la date effective à laquelle s'applique le prix
       const effectiveDate = isCurrentMonth
         ? dateEcheance
         : isFuture
@@ -91,17 +107,14 @@ export default function HomeScreen({ goToSetup }) {
 
       let appliedPrice = abo.prix;
 
-      // Vérifie s'il faut mettre à jour le prix selon la date de changement
       if (changeDate && effectiveDate >= changeDate) {
         appliedPrice = planData.price;
       } else if (changeDate && effectiveDate < changeDate && planData.oldPrice) {
         appliedPrice = planData.oldPrice;
       }
 
-      return { ...abo, appliedPrice };
+      return { ...abo, appliedPrice, dateEcheance };
     });
-
-
 
   const displayTotal = displayAbos.reduce((acc, abo) => acc + parseFloat(abo.appliedPrice || 0), 0);
 
@@ -130,6 +143,58 @@ export default function HomeScreen({ goToSetup }) {
   return (
     <View style={{ flex: 1, backgroundColor: '#181A20', padding: 20 }}>
 
+      {/* Simulateur de date (jour courant) */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, justifyContent: 'center' }}>
+        <TouchableOpacity
+          onPress={() => setFakeToday(prev => {
+            const d = new Date(prev || new Date());
+            d.setDate(d.getDate() - 1);
+            return d;
+          })}
+          style={{ marginHorizontal: 8, backgroundColor: "#34B6FF", borderRadius: 5, padding: 6 }}
+        >
+          <Text style={{ color: "#fff", fontSize: 18 }}>{"<"}</Text>
+        </TouchableOpacity>
+        <Text style={{ color: "#fff", fontSize: 16 }}>
+          Jour simulé : {dateToString(today)}
+        </Text>
+        <TouchableOpacity
+          onPress={() => setFakeToday(prev => {
+            const d = new Date(prev || new Date());
+            d.setDate(d.getDate() + 1);
+            return d;
+          })}
+          style={{ marginHorizontal: 8, backgroundColor: "#34B6FF", borderRadius: 5, padding: 6 }}
+        >
+          <Text style={{ color: "#fff", fontSize: 18 }}>{">"}</Text>
+        </TouchableOpacity>
+        {fakeToday && (
+          <TouchableOpacity
+            onPress={() => setFakeToday(null)}
+            style={{ marginLeft: 10, backgroundColor: "#888", borderRadius: 5, padding: 6 }}
+          >
+            <Text style={{ color: "#fff" }}>Reset</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Debug bouton */}
+      <TouchableOpacity
+        style={{
+          backgroundColor: "#22242B",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 10,
+          marginBottom: 10,
+          borderRadius: 10,
+          borderWidth: 1,
+          borderColor: "#34B6FF"
+        }}
+        onPress={resetAll}
+      >
+        <Text style={{ color: "#34B6FF", fontWeight: "bold" }}>Debug : Reset onboarding</Text>
+      </TouchableOpacity>
+
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
         <TouchableOpacity onPress={handlePrev} disabled={!visibleMonths.includes(getMonthKey(addMonths(currentDate, -1)))}>
           <Text style={{ fontSize: 24, color: '#34B6FF' }}>{'<'}</Text>
@@ -146,6 +211,7 @@ export default function HomeScreen({ goToSetup }) {
         Total : {displayTotal.toFixed(2)} €
       </Text>
 
+      {/* Bouton ajouter */}
       <TouchableOpacity
         style={{
           backgroundColor: 'transparent',
@@ -156,22 +222,30 @@ export default function HomeScreen({ goToSetup }) {
           alignItems: 'center',
           marginBottom: 14,
         }}
-        onPress={goToSetup}
+        onPress={() => router.push('/setup')}
       >
         <Text style={{ color: '#34B6FF', fontWeight: 'bold' }}>Ajouter un abonnement</Text>
       </TouchableOpacity>
 
       <ScrollView>
         {displayAbos.map((abo, i) => {
-          const date = new Date(abo.derniereEcheance);
+          const date = abo.dateEcheance;
           const isCurrentMonth = getMonthKey(date) === currentMonthKey;
           const isFuture = getMonthKey(addMonths(date, 1)) === currentMonthKey;
           const isGrayed = !isCurrentMonth;
 
-          const day = date.getDate().toString().padStart(2, '0');
-          const currentMonth = MONTHS[currentDate.getMonth()];
-          const currentYear = currentDate.getFullYear();
+          // LOGIQUE CONTOUR BLEU : échéance == aujourd'hui
+          const dayToday = today.getDate();
+          const monthToday = today.getMonth();
+          const yearToday = today.getFullYear();
 
+          // L'échéance (prochaine) = au today
+          const isEcheanceToday = abo.autoRenew && isFuture &&
+            addMonths(date, 1).getDate() === dayToday &&
+            addMonths(date, 1).getMonth() === monthToday &&
+            addMonths(date, 1).getFullYear() === yearToday;
+
+          const day = date.getDate().toString().padStart(2, '0');
           const nextDate = addMonths(date, 1);
           const nextDay = nextDate.getDate().toString().padStart(2, '0');
           const nextMonth = MONTHS[nextDate.getMonth()];
@@ -182,8 +256,8 @@ export default function HomeScreen({ goToSetup }) {
               key={i}
               style={{
                 backgroundColor: isGrayed ? '#1B1D24' : '#22242B',
-                borderColor: isGrayed ? '#333642' : '#34B6FF',
-                borderWidth: 1,
+                borderColor: isEcheanceToday ? '#0094FF' : (isGrayed ? '#333642' : '#34B6FF'),
+                borderWidth: 2,
                 borderRadius: 10,
                 padding: 16,
                 marginBottom: 12,
@@ -213,6 +287,11 @@ export default function HomeScreen({ goToSetup }) {
                 {abo.autoRenew && isFuture && (
                   <Text style={{ color: '#34B6FF', marginTop: 6 }}>
                     Prochaine échéance le {nextDay} {nextMonth} {nextYear}
+                  </Text>
+                )}
+                {isEcheanceToday && (
+                  <Text style={{ color: '#0094FF', fontWeight: 'bold', marginTop: 4 }}>
+                    👉 Échéance aujourd'hui !
                   </Text>
                 )}
               </View>
